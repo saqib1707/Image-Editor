@@ -32,7 +32,7 @@ def boxKernel(winSize):
     kernel = np.ones((winSize, winSize))/(winSize*winSize)
     return kernel
 
-def round_angle(angle):
+def roundAngle(angle):
     """ 
         this functions rounds-off the input angle to four values
         Input angle must be in [0,180) 
@@ -160,7 +160,7 @@ class MyImageEditor(QWidget):
         """
             converts opencv image to QImage. 
             source : Stack Overflow
-            Input : img must be in openCV image format
+            Input : img must be in openCV image format (np.uint8)
         """
         if img is None:
             return QImage()
@@ -175,11 +175,11 @@ class MyImageEditor(QWidget):
             elif len(img.shape) == 3:
                 # if image has three channels
                 if img.shape[2] == 3:
-                    qim = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_RGB888);
+                    qim = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_RGB888)
                     return qim.copy() if copy else qim
                 # if image has four channels
                 elif img.shape[2] == 4:
-                    qim = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_ARGB32);
+                    qim = QImage(img.data, img.shape[1], img.shape[0], img.strides[0], QImage.Format_ARGB32)
                     return qim.copy() if copy else qim
 
     
@@ -223,7 +223,7 @@ class MyImageEditor(QWidget):
         fig = plt.figure(1, figsize = (6, 6))
         plt.subplot(211); plt.plot(original_img_hist, linewidth=0.9); plt.xlabel('Intensity'); plt.ylabel('Count of Pixels'); plt.grid(True)
         plt.subplot(212); plt.plot(equalized_img_hist, linewidth=0.9); plt.xlabel('Intensity'); plt.ylabel('Count of Pixels'); plt.grid(True)
-        plt.suptitle('Comparison of Original vs Equalized Histograms')
+        plt.suptitle('Comparison of Original vs Equalized Image Histograms')
         plt.show()
 
         self.finalDisplay(resultantImage)                                    # display the output image          
@@ -313,10 +313,13 @@ class MyImageEditor(QWidget):
         # display the sharpened image 
         self.finalDisplay(sharpenedImage)
 
-    
-    
+        
     @pyqtSlot()
     def specialFeature(self):
+        """
+            Canny Edge DEtection
+            Source : https://github.com/fubel/PyCannyEdge
+        """
         sigma = 1.6                      # standard deviation for gaussian blurring 
         winSize = 3                      # kernel size for gaussian blurring
         strong = np.int32(255)
@@ -350,8 +353,8 @@ class MyImageEditor(QWidget):
             for j in range(imgWidth):
                 blurredImage[i,j] = np.sum(paddedImage[i:i+winSize, j:j+winSize]*mykernel)
         # kernel for finding gradient in X & Y direction
-        kernelGradientX = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.int32)
-        kernelGradientY = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.int32)
+        kernelGradientX = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.int32)    # vertical edges
+        kernelGradientY = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.int32)    # horizontal edges
 
         paddedImage[winSize//2:imgHeight+winSize//2, winSize//2:imgWidth+winSize//2] = blurredImage
         # for storing the convolution result of 
@@ -374,18 +377,18 @@ class MyImageEditor(QWidget):
         for i in range(imgHeight):
             for j in range(imgWidth):
                 # find neighbour pixels to visit from the gradient directions
-                where = round_angle(gradientDirection[i, j])
+                quantizedGradientDirection = roundAngle(gradientDirection[i, j])
                 try:
-                    if where == 0:
+                    if quantizedGradientDirection == 0:
                         if (gradientMagnitude[i, j] >= gradientMagnitude[i, j - 1]) and (gradientMagnitude[i, j] >= gradientMagnitude[i, j + 1]):
                             edgeDetectedImage[i,j] = gradientMagnitude[i,j]
-                    elif where == 90:
+                    elif quantizedGradientDirection == 90:
                         if (gradientMagnitude[i, j] >= gradientMagnitude[i - 1, j]) and (gradientMagnitude[i, j] >= gradientMagnitude[i + 1, j]):
                             edgeDetectedImage[i,j] = gradientMagnitude[i,j]
-                    elif where == 135:
+                    elif quantizedGradientDirection == 135:
                         if (gradientMagnitude[i, j] >= gradientMagnitude[i - 1, j - 1]) and (gradientMagnitude[i, j] >= gradientMagnitude[i + 1, j + 1]):
                             edgeDetectedImage[i,j] = gradientMagnitude[i,j]
-                    elif where == 45:
+                    elif quantizedGradientDirection == 45:
                         if (gradientMagnitude[i, j] >= gradientMagnitude[i - 1, j + 1]) and (gradientMagnitude[i, j] >= gradientMagnitude[i + 1, j - 1]):
                             edgeDetectedImage[i,j] = gradientMagnitude[i,j]
                 except IndexError as e:
